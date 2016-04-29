@@ -1,0 +1,84 @@
+package labPackage;
+
+import java.util.Arrays;
+
+import lejos.hardware.Button;
+import lejos.hardware.motor.*;
+import lejos.hardware.sensor.EV3ColorSensor;
+import lejos.hardware.sensor.SensorMode;
+import lejos.robotics.RegulatedMotor;
+import lejos.robotics.SampleProvider;
+
+public  class ShooterMilestone {
+	private EV3LargeRegulatedMotor lowerArmMotor, higherArmMotor; //lower is arm, higher is claw
+	private RegulatedMotor shooter, loaderMotor;
+	private Navigation nav;
+	private SampleProvider colorValue;
+	private EV3ColorSensor colorSensor;
+	private float[] colorData = new float[3];
+	private double angle;
+	
+	public ShooterMilestone(EV3LargeRegulatedMotor lowerArmMotor, EV3LargeRegulatedMotor higherArmMotor, RegulatedMotor shooter, RegulatedMotor loaderMotor, Navigation nav , SampleProvider colorValue, float[] colorData, EV3ColorSensor colorSensor, double angle){
+		this.lowerArmMotor = lowerArmMotor;
+		this.higherArmMotor = higherArmMotor;
+		this.shooter = shooter;
+		this.loaderMotor = loaderMotor;
+		this.nav = nav;
+		this.colorValue = colorValue;
+		this.colorSensor = colorSensor; 
+		this.colorData = colorData;
+		this.angle = angle;
+		colorSensor.setCurrentMode("RGB");
+	}
+	
+	public void doShooter(){
+		colorSensor.setFloodlight(true);						// setting up the sensor
+		
+		
+		while(true){
+			
+			if(getFilteredRValue() >= 0.015 && getFilteredRValue() < 2.0) {
+				nav.setSpeeds(0,0);
+				shooter.setSpeed(450);
+				loaderMotor.setSpeed(80);
+				lowerArmMotor.setAcceleration(200);
+				lowerArmMotor.setSpeed(30);
+				higherArmMotor.setSpeed(80);
+				
+				
+				lowerArmMotor.rotate(-15); //bring upright
+				shooter.rotate(-1000, true); //winding up shooter
+				higherArmMotor.rotate(150); //opening claw. START W CLAW FULLY CLOSED
+				lowerArmMotor.rotate(-120); //lowering arm
+				shooter.rotate(1000, true); //unwind
+				higherArmMotor.rotate(-130); //closing claw grabbing ball
+				lowerArmMotor.rotate(140); //bringing up arm
+				higherArmMotor.rotate(50); //opening claw
+				lowerArmMotor.rotate(-15, true); //bring upright
+				loaderMotor.rotate(367); //make room for new ball
+				shooter.rotate(500); //shoot
+				shooter.rotate(-500);
+				break;
+			}
+		
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+		
+	}
+	
+	public float getFilteredRValue() {
+		float[] temp = new float[5];
+		for(int i = 0 ; i < 5; i++) {
+			colorSensor.fetchSample(colorData, 0);
+			temp[i] = colorData[0];
+		}
+		Arrays.sort(temp);
+		return temp[0]; //return the lowest value
+	}
+
+}

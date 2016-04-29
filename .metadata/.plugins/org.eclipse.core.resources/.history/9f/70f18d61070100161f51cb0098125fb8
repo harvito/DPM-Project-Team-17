@@ -1,0 +1,212 @@
+package labPackage;
+
+import java.io.IOException;  
+import java.rmi.NotBoundException;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import navigation.Driver;
+import navigation.OdometryCorrection;
+import navigation.OdometryCorrection_Nathan;
+import lejos.hardware.*;
+import lejos.hardware.ev3.EV3;
+import lejos.hardware.ev3.LocalEV3;
+import lejos.hardware.motor.EV3LargeRegulatedMotor;
+import lejos.hardware.motor.EV3MediumRegulatedMotor;
+import lejos.hardware.port.Port;
+import lejos.hardware.sensor.*;
+import lejos.remote.ev3.RemoteEV3;
+import lejos.remote.ev3.RemoteRequestEV3;
+import lejos.robotics.RegulatedMotor;
+import lejos.robotics.SampleProvider;
+
+public class Main {
+
+	// Static Resources:
+	// Left motor connected to output A
+	// Right motor connected to output D
+	// Ultrasonic sensor port connected to input S1
+	// Color sensor port connected to input S2
+
+
+
+	public static void main(String[] args)  {
+
+		//ImportedData
+		int urx = 6;
+		int ury = 6;
+		double angle = 0;
+
+		//Brick brick1 = null;
+		Brick bricks1 = null;
+		RemoteRequestEV3 bricks2 = null;
+		//RegulatedMotor leftMotor;
+
+		try {
+			bricks1 = new RemoteEV3(BrickFinder.find("EV1")[0].getIPAddress());
+			bricks2 = new RemoteRequestEV3(BrickFinder.find("EV3")[0].getIPAddress());
+
+
+			//RegulatedMotor rightMotor = new EV3LargeRegulatedMotor(BrickFinder.getLocal().getPort("D"));
+			//usPort1 = bricks1.getPort("S1");		
+			//usPort2 = bricks1.getPort("S2");	
+
+		} catch (IOException | NotBoundException e) {
+			System.out.println("An error occured while assigning the bricks to the motors.");
+			e.printStackTrace();
+		}
+
+		//bricks1.getAudio().playTone(Sound.BEEP, 100);
+
+		EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(BrickFinder.getLocal().getPort("A"));
+		EV3LargeRegulatedMotor lowerArmMotor = new EV3LargeRegulatedMotor(BrickFinder.getLocal().getPort("B")); //arm motor
+		EV3LargeRegulatedMotor higherArmMotor = new EV3LargeRegulatedMotor(BrickFinder.getLocal().getPort("C")); //claw motor
+		EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(BrickFinder.getLocal().getPort("D"));
+		RegulatedMotor usMotor = bricks2.createRegulatedMotor("C", 'M');
+		RegulatedMotor shooter = bricks2.createRegulatedMotor("A", 'L');
+		RegulatedMotor loaderMotor = bricks2.createRegulatedMotor("B", 'M');
+		Sound.beep();
+
+		//Setup ultrasonic sensor
+
+		Port uvPort1 = BrickFinder.getLocal().getPort("S1");
+		Port uvPort2 = BrickFinder.getLocal().getPort("S2");
+		Port colorPort1 =  BrickFinder.getLocal().getPort("S3");
+		Port ballScannerColorSensorPort = BrickFinder.getLocal().getPort("S4");
+
+		SensorModes usSensor1 = new EV3UltrasonicSensor(uvPort1);
+		SensorModes usSensor2 = new EV3UltrasonicSensor(uvPort2);
+
+		SampleProvider sampleProvider1 = usSensor1.getMode("Distance"); 
+		SampleProvider sampleProvider2 = usSensor2.getMode("Distance"); 
+
+		float[] usData1 = new float[sampleProvider1.sampleSize()];				// colorData is the buffer in which data are returned
+		float[] usData2 = new float[sampleProvider2.sampleSize()];				// colorData is the buffer in which data are returned
+
+		EV3ColorSensor colorSensor1 = new EV3ColorSensor(colorPort1);
+		EV3ColorSensor scannerCS = new EV3ColorSensor(ballScannerColorSensorPort);
+
+		final SampleProvider colorValue1 = colorSensor1.getMode("RGB");		
+		final float[] colorData1 = new float[colorValue1.sampleSize()];	
+
+		// setup the odometer and display
+		Odometer odo = new Odometer(leftMotor, rightMotor, 30, true);
+		LCDInfo lcd = new LCDInfo(odo, usSensor1, usData1, usSensor2, usData2);
+		Navigation nav = new Navigation(odo);
+		ShooterMilestone sho = new ShooterMilestone(lowerArmMotor, higherArmMotor, shooter, loaderMotor, nav, odo, colorValue1, colorData1, scannerCS, angle);
+
+		// perform the ultrasonic localization
+		USLocalizer usl = new USLocalizer( odo, sampleProvider1, usData1,sampleProvider2, usData2, USLocalizer.LocalizationType.FALLING_EDGE, 4);
+		LightLocalizer lsl = new LightLocalizer(leftMotor, rightMotor, nav, odo, colorValue1, colorData1, colorSensor1);
+		//		//OdometryCorrection_Nathan cor = new OdometryCorrection_Nathan(nav, usMotor, 2, 4, odo, colorValue1, colorData1, colorSensor1);
+		//		Driver driver = new Driver(nav, usMotor, 6, 6, odo, 6, 6, sampleProvider2);
+		//		OdometryCorrection  odometryCorrection = new OdometryCorrection(odo, colorSensor1);
+
+		GoToAttackZone goToAttackZone = new GoToAttackZone(nav, odo, usMotor, 2, sampleProvider2, usData2);
+		GoCloseToBalls goCloseToBalls = new GoCloseToBalls(nav, odo, 6, 3, sampleProvider2, usData2);
+
+
+		
+		//		Button.waitForAnyPress();
+
+		usl.doLocalization();
+		
+		//calculate target coordinates for light localization
+		double[] lightLocalTarget = null;
+		switch (4) {
+		case 1:
+			lightLocalTarget = new double[] {0.0, 0.0};
+		case 2:
+			lightLocalTarget = new double[] {30.96 * 10.0, 0.0};
+		case 3:
+			lightLocalTarget = new double[] {30.95 * 10.0, 30.96 * 10.0};
+		case 4:
+			lightLocalTarget = new double[] {0.0, 10.96 * 10.0};
+		}
+		lsl.doLocalization(lightLocalTarget[0], lightLocalTarget[1]);
+		Button.waitForAnyPress();
+		
+		//		Button.waitForAnyPress();
+		//		nav.travelTo(15.84,15.84);
+		goToAttackZone.runThreads();
+		goToAttackZone.killThreads();
+		goCloseToBalls.runThreads();
+		
+		sho.loadBalls(1); //0 = red balls, 1 = blue balls
+		sho.shootAll();
+		
+//		try {
+//			Thread.sleep(20000);
+//			Sound.beepSequence();
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		
+		//goToAttackZone.killThreads();
+		
+		//nav.travelTo(78, 16, false);
+		
+//		goCloseToBalls.runThreads();
+		
+		
+		//		
+		//		driver.start();
+		//		odometryCorrection.start();
+		//		av.tr
+		//		
+		//		
+		//		
+		//		sho.doShooter();
+		//cor.run();
+		//wallFollower.run();
+
+		//perform the light sensor localization
+		//LightLocalizer lsl = new LightLocalizer(leftMotor, rightMotor, nav, odo, colorValue1, colorData1, colorSensor1);
+		//nav.travelTo(11.0,11.0);											// travel to where it's possible to do light localization
+		//lsl.doLocalization();											// perform the light sensor localization
+		//nav.travelTo(0,0);											// travel to origin
+		//nav.turnTo(0, true);	
+		//		
+		Sound.beep();
+
+		//leftMotor.close();
+		//rightMotor.close();
+		//bricks2.disConnect();       		//i think this is fucking things up
+		//colorSensor1.close();
+		//colorSensor2.close();
+		//(Port)colorPort1.getClose();
+		//ev3UltrasonicSensor1.close();
+		//		ev3UltrasonicSensor2.close();
+		//		colorSensor1.close();
+		//		colorSensor2.close();
+
+
+		while (Button.waitForAnyPress() != Button.ID_ESCAPE);
+		System.exit(0);
+
+	}
+
+
+
+
+	//	SampleProvider usValue1 = bricks2.createSampleProvider("S1", "lejos.hardware.sensor.EV3UltrasonicSensor", "Distance");;			// colorValue provides samples from this instance
+	//		SampleProvider usValue2 = bricks2.createSampleProvider("S2", "lejos.hardware.sensor.EV3UltrasonicSensor", "Distance");;			// colorValue provides samples from this instance	
+	//		float[] usData1 = new float[usValue1.sampleSize()];				// colorData is the buffer in which data are returned
+	//		float[] usData2 = new float[usValue2.sampleSize()];				// colorData is the buffer in which data are returned
+
+
+
+}

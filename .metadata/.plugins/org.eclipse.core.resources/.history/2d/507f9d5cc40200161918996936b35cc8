@@ -1,0 +1,109 @@
+package labPackage;
+import lejos.hardware.Sound;
+import lejos.robotics.SampleProvider;
+import lejos.robotics.filter.LowPassFilter;
+public class GoCloseToBalls {
+	Navigation nav;
+	int lane;
+	Odometer odo;
+	Thread thread1;
+	Thread thread2;
+	Thread thread3;
+	int corner;
+	int lowerLeftX;
+	int lowerLeftY;
+	private SampleProvider usSensor1;
+	private float[] usData1;
+	boolean noObstacle = true;
+	boolean travellingInX = true;
+	boolean doneGoingNearBalls = false;
+	int travelFactor = 1;
+	
+	public GoCloseToBalls(Navigation nav,Odometer odo,int lowerLeftX, int lowerLeftY, SampleProvider usSensor1, float[] usData1){
+		this.nav = nav;
+		this.lane = lane;
+		this.odo = odo;
+		this.lowerLeftX = lowerLeftX;
+		this.lowerLeftY = lowerLeftY;
+		this.usSensor1 = usSensor1;
+		this.usData1 = usData1;
+		setUpThreads();
+		if(lowerLeftX < 6){
+			travelFactor = -1;
+		}
+		
+	}
+	public void runThreads(){
+		thread1.start();
+		thread2.start();
+	}
+	public void killThreads(){
+		boolean stop = false;
+		while(!stop){
+			double xValue = odo.getX();
+			double yValue = odo.getY();
+			if((xValue < (lowerLeftX-1)*30.96+7 && xValue > (lowerLeftX-1)*30.96-7)  && (yValue < (lowerLeftY-1)*30.96+7 && yValue > (lowerLeftY-1)*30.96-7)){
+				Sound.beep();
+				Sound.beep();
+				stop = true;
+				doneGoingNearBalls = true;
+			}
+			try {
+				Thread.sleep(5000);
+			} catch (InterruptedException e) {
+			
+				e.printStackTrace();
+			}
+		}
+	}
+	public void setUpThreads(){
+		thread1 = new Thread(){
+			public void run(){
+				while(!doneGoingNearBalls){
+					while(noObstacle){
+						nav.travelToBallsX((lowerLeftX-1)*30.96, odo.getY(), travelFactor);
+						if(noObstacle){
+							nav.turnToSimple(90, -1, 1);
+							nav.travelToBallsY(odo.getX(), (lowerLeftY-1)*30.96);
+						}
+						Sound.beepSequenceUp();
+					}
+				}
+			}
+		};
+		thread2 = new Thread(){
+			public void run(){
+				while(!doneGoingNearBalls){
+					if(getFilteredData1() < 19){
+						noObstacle = false;
+						nav.setKeepTravelling(false);
+						double xValue = odo.getX();
+						double yValue = odo.getY();
+						nav.setSpeeds(0, 0);
+						if (xValue < ((lowerLeftX-1)*30.96 - 5) || xValue > ((lowerLeftX-1)*30.96 +5)){
+							nav.turnToSimple(90, -1, 1);
+							nav.goForward(30.96);
+								
+							nav.turnToSimple(90,1, -1);    //rememeber this 0 changes depending where the ball rack is
+						}
+						else{
+							nav.turnToSimple(90, -1, 1);
+							nav.goForward(30.96);
+							nav.turnToSimple(90,1,-1);
+						}
+						Sound.beepSequence();
+					}
+					nav.setKeepTravelling(true);
+					noObstacle = true;
+				}
+			}
+		};
+	}
+	private float getFilteredData1() {
+		usSensor1.fetchSample(usData1, 0);
+		float distance = usData1[0]*100;
+		if (distance > 60)														
+			distance = 60;																				
+		return distance;
+	}
+}

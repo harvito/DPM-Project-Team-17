@@ -1,0 +1,64 @@
+package labPackage;
+
+import lejos.hardware.motor.*;
+import lejos.hardware.sensor.EV3ColorSensor;
+import lejos.hardware.sensor.SensorMode;
+import lejos.robotics.RegulatedMotor;
+import lejos.robotics.SampleProvider;
+
+public  class ShooterMilestone {
+	private EV3LargeRegulatedMotor lowerArmMotor, higherArmMotor;
+	private RegulatedMotor shooter;
+	private Navigation nav;
+	private SampleProvider colorValue;
+	private EV3ColorSensor colorSensor;
+	private float[] colorData;
+	private double angle;
+	
+	public ShooterMilestone(EV3LargeRegulatedMotor lowerArmMotor, EV3LargeRegulatedMotor higherArmMotor, RegulatedMotor shooter, Navigation nav , SampleProvider colorValue, float[] colorData, EV3ColorSensor colorSensor, double angle){
+		this.lowerArmMotor = lowerArmMotor;
+		this.higherArmMotor = higherArmMotor;
+		this.shooter = shooter;
+		this.nav = nav;
+		this.colorValue = colorValue;
+		this.colorSensor = colorSensor; 
+		this.colorData = colorData;
+		this.angle = angle;
+	}
+	
+	public void doShooter(){
+		colorSensor.setFloodlight(true);						// setting up the sensor
+		SensorMode sensorMode = colorSensor.getRedMode();
+		
+		while(true){
+			sensorMode.fetchSample(colorData, 0);
+			
+			if(colorData[0] > 5){
+				nav.setSpeeds(0,0);
+				shooter.setSpeed(100);
+				lowerArmMotor.setSpeed(30);
+				higherArmMotor.setSpeed(30);
+				
+				lowerArmMotor.rotate(-90);
+				higherArmMotor.rotate(150);
+				lowerArmMotor.rotate(-110);
+				higherArmMotor.rotate(-150);
+				lowerArmMotor.rotate(165);
+				shooter.rotate(-1000);
+				higherArmMotor.rotate(120);
+				shooter.rotate(1500);
+				shooter.rotate(-500);
+				break;
+			}
+		}
+		
+		try {
+			Thread.sleep(7000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+
+}

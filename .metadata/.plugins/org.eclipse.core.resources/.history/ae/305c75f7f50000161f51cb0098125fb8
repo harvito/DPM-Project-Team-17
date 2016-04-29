@@ -1,0 +1,166 @@
+package labPackage;
+
+import lejos.hardware.Sound;
+import lejos.robotics.RegulatedMotor;
+import lejos.robotics.SampleProvider;
+
+public class GoToAttackZone {
+
+	Navigation nav;
+	RegulatedMotor usMotor;
+	int lane;
+	Odometer odo;
+	Thread thread1;
+	Thread thread2;
+	Thread thread3;
+	int corner;
+	private SampleProvider usSensor1;
+	private float[] usData1;
+	boolean noObstacle = true;
+	boolean doneNav = true;
+	boolean doneAvoiding = true;
+	double x = 0;
+	double y = 15.84;
+
+
+	public GoToAttackZone(Navigation nav,Odometer odo, RegulatedMotor usMotor, int lane, SampleProvider usSensor1, float[] usData1){
+
+		this.nav = nav;
+		this.lane = lane;
+		this.odo = odo;
+		this.usMotor = usMotor;
+
+		this.usSensor1 = usSensor1;
+		this.usData1 = usData1;
+		setUpThreads();
+
+	}
+
+	public void runThreads(){
+		thread1.start();
+		thread2.start();
+		thread3.start();
+	}
+	public void killThreads(){
+		boolean stop = false;
+		while(!stop){
+			double xValue = odo.getX();
+			double yValue = odo.getY();
+			if((xValue < x+7 && xValue > x-7)  && (yValue < y+7 && yValue > y-7)){
+				Sound.beep();
+				Sound.beep();
+				stop = true;
+				doneNav = true;
+			}
+			
+			try {
+				Thread.sleep(10000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		//doneNav = false;
+	}
+
+	public void setUpThreads(){
+		thread1 = new Thread () {
+			
+			
+			public void run () {
+				while(!doneNav){
+					while(noObstacle){
+						
+
+						if( lane == 1){
+							x = -15.84;
+						}else if (lane == 2){
+							x = 15.84;
+						}else if (lane == 3){
+							x = 95.04;
+						}else{
+							x = 110.88;
+						}
+						nav.travelTo(x,y, true);
+					}
+					//Sound.beep();
+				}
+			}
+		};
+		thread2 = new Thread () {
+			public void run () {
+				while(!doneNav){
+					if(getFilteredData1() < 19 && nav.doneTurning){   //it sees something and nav's bool is true
+						int currentY = (int) odo.getYUnsynched();
+						
+						noObstacle = false;
+						nav.setKeepTravelling(false);
+						nav.setSpeeds(0, 0);
+						
+						if( lane == 1){
+							nav.setKeepTravelling(true);
+							nav.travelToXDirection(15.84, currentY, false);
+							lane = 2;
+
+						}else if (lane == 2){
+							nav.setKeepTravelling(true);
+							nav.travelToXDirection(-15.84, currentY, false);
+							lane = 1;
+
+						}else if (lane == 3){
+							nav.setKeepTravelling(true);
+							nav.travelToXDirection(110.88, currentY, false);
+							lane = 4;
+
+						}else{
+							nav.setKeepTravelling(true);
+							nav.travelToXDirection(95.04, currentY, false);
+							lane = 3;
+						}
+						Sound.beepSequence();
+					}
+					//Sound.beepSequence();
+					noObstacle = true;
+
+				}
+			}
+		};
+
+		thread3 = new Thread(){
+			
+			public void run(){
+				int counter = 1;
+				usMotor.setAcceleration(80);
+				usMotor.setSpeed(180);
+				while(true){
+					if (counter == 1){
+						usMotor.rotate(33,false);
+					}
+					else if(counter%2 == 0){
+						usMotor.rotate(-66,false);
+					}
+					else{
+						usMotor.rotate(66,false);
+					}
+					
+					counter++;
+					
+					
+				}
+			}
+		};
+
+	}
+
+	private float getFilteredData1() {
+		usSensor1.fetchSample(usData1, 0);
+		float distance = usData1[0]*100;
+
+		if (distance > 60)														
+			distance = 60;																				
+
+		return distance;
+	}
+	//public boolean checkIfDone(x, y);
+
+}

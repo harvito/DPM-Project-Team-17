@@ -1,0 +1,129 @@
+package labPackage;
+
+import lejos.hardware.Sound;
+import lejos.hardware.lcd.LCD;
+import lejos.robotics.SampleProvider;
+
+public class USLocalizer {
+	public enum LocalizationType { FALLING_EDGE, RISING_EDGE };
+	public static float ROTATION_SPEED = 150;
+	public double angleLeft = 0.0;
+	public double angleRight = 0.0;
+
+
+	private Odometer odo;
+	private SampleProvider usSensor1;
+	private float[] usData1;
+	private SampleProvider usSensor2;
+	private float[] usData2;
+	private LocalizationType locType;
+	private Navigation nav;
+
+	private static boolean isMeasured  = false;
+	private double distance; 
+	private double distanceUS1; 
+	private double distanceUS2; 
+	private final double distanceThreshold = 30;
+	private double sideAngle;
+	private int square;
+
+
+	public USLocalizer(Odometer odo,  SampleProvider usSensor1, float[] usData1,  SampleProvider usSensor2, float[] usData2, LocalizationType locType, int square) {
+		this.square = square;
+		this.odo = odo;
+		this.usSensor1 = usSensor1;
+		this.usData1 = usData1;
+		this.usSensor2 = usSensor2;
+		this.usData2 = usData2;
+		this.locType = locType;
+		this.nav = new Navigation(odo);
+	}
+
+	/**
+	 * Method that sets the angle that the robot perceives to be 90 degrees. This is based on which corner the robot starts 
+	 * @return the upwards angle based on starting position
+	 */
+	public double getSideAngle(){   
+		int square = this.square;
+		double sideAngle = 0.0;
+		if( square == 1)
+			sideAngle = 90.0;
+		else if (square == 2)
+			sideAngle = 180.0; 
+		else if (square == 3)
+			sideAngle = 270.0;
+		else if (square == 4)
+			sideAngle = 0.0;
+		return sideAngle;
+	}
+	/**
+	 * Method that gathers information on the angle and the x, y position of the robot through light sensor and ultrasound sensor
+	 * information
+	 */
+	public void doLocalization() {
+
+		nav.turnRightFast(); 	//we first begin by turning right until we pass an open gap and then sense the right wall
+
+		while(true){
+			if(getFilteredData1() > 50 && getFilteredData2() > 50)  //waits for the two sensors to pass the open gap 
+				break;
+		}
+		
+		while(true){
+			if(getFilteredData1() < 30){  //if the right sensor sees the right wall
+				odo.setPosition(new double[] {0.0,  0.0, 0.0}, new boolean[] {false, false, true});   //we set the angle to 0 so we can do a left turn 
+				nav.turnToFast(110, true);		//we turn left roughly so that we're perpendicular to the wall 
+				nav.goForward(-25);  		//we go backwards up against the wall making us face exactly perpendicular to the right wall
+				odo.setPosition(new double[] {0.0,  0.0, getSideAngle()}, new boolean[] {false, false, true});  //depending on where we start, we set the angle
+				nav.goForward(11); 			//we give oursleves some room to do light localizing
+				nav.turnToNoError(0, true);   	// we turn 90 degrees clockwise 
+				nav.forward();					// we go forward, this will be interrupted by the light sensor
+				break;
+			}
+		}		
+
+
+	}
+	/**
+	 * Method that utilizes the right ultrasound sensor to calculate distance. Distances over 60 cm are ignored
+	 * @return the distance the sensor senses to the nearest object in cm
+	 */
+	private float getFilteredData1() {
+		usSensor1.fetchSample(usData1, 0);
+		float distance = usData1[0]*100;
+
+		if (distance > 60)														
+			distance = 60;																				
+
+		return distance;
+	}
+	
+	/**
+	 * Method that utilizes the left ultrasound sensor to calculate distance. Distances over 60 cm are ignored
+	 * @return the distance the sensor senses to the nearest object in cm
+	 */
+	private float getFilteredData2() {
+		usSensor2.fetchSample(usData2, 0);
+		float distance = usData2[0]*100;
+
+		if (distance > 60)														
+			distance = 60;																				
+
+		return distance;
+	}
+
+	/**
+	 * Adjusts the angle so that no angle can be negative, and no angle can be greater than 360
+	 * @param angle
+	 * @return the adjusted angle 
+	 */
+	private double adjustAngle(double angle){
+		if(angle > 360.0)
+			return (angle - 360.0);
+		else if(angle < 0.0)
+			return (angle + 360.0);
+		else 
+			return angle;
+	}
+
+}

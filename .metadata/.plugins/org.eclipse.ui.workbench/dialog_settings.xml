@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="WorkbenchPreferenceDialogSettings">
+		<item value="379" key="DIALOG_X_ORIGIN"/>
+		<item value="124" key="DIALOG_Y_ORIGIN"/>
+	</section>
+	<section name="org.eclipse.ui.internal.QuickAccess">
+		<item value="-1" key="dialogHeight"/>
+		<item value="-1" key="dialogWidth"/>
+		<list key="textEntries">
+		</list>
+		<list key="orderedElements">
+		</list>
+		<list key="orderedProviders">
+		</list>
+		<list key="textArray">
+		</list>
+	</section>
+	<section name="InstallationDialogSettings">
+		<item value="934" key="DIALOG_WIDTH"/>
+		<item value="1|Segoe UI|9.0|0|WINDOWS|1|-15|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI" key="DIALOG_FONT_NAME"/>
+		<item value="980" key="DIALOG_HEIGHT"/>
+		<item value="-146" key="DIALOG_X_ORIGIN"/>
+		<item value="0" key="DIALOG_Y_ORIGIN"/>
+	</section>
+	<section name="ImportExportAction">
+		<item value="org.eclipse.ui.wizards.import.ZipFile" key="ImportExportPage.STORE_SELECTED_IMPORT_WIZARD_ID"/>
+		<list key="ImportExportPage.STORE_EXPANDED_IMPORT_CATEGORIES">
+			<item value="org.eclipse.ui.Basic"/>
+		</list>
+	</section>
+	<section name="ZipFileImportWizard">
+		<item value="false" key="WizardZipFileResourceImportPage1.STORE_OVERWRITE_EXISTING_RESOURCES_ID"/>
+		<list key="WizardZipFileResourceImportPage1.STORE_SOURCE_NAMES_ID">
+			<item value="C:\Users\Mike\Dropbox\Dossier de l&apos;équipe TEAM17\TEAM17\genericFiles\Hall_9000_v0.3.zip"/>
+			<item value="C:\Users\Mike\Downloads\DPM-Client-2016 v3.zip"/>
+			<item value="C:\Users\Mike\Dropbox\Dossier de l&apos;équipe TEAM17\TEAM17\projectDocuments\softwareDesignDocuments\Version0.4.zip"/>
+			<item value="C:\Users\Mike\Downloads\version0.3.zip"/>
+			<item value="C:\Users\Mike\Downloads\Lab 4 code (+odometer +navigation).zip"/>
+			<item value="C:\Users\Mike\Downloads\Lab 4 (1).zip"/>
+			<item value="C:\Users\Mike\Downloads\Lab 4.zip"/>
+			<item value="C:\Users\Mike\Downloads\Lab2 Odometry.zip"/>
+			<item value="C:\Users\Mike\Downloads\OdometryCode(v1.1).zip"/>
+			<item value="C:\Users\Mike\Downloads\Lab1-EV3-WallFollower-code.zip"/>
+		</list>
+	</section>
+</section>

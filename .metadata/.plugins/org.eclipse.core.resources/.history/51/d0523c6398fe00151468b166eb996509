@@ -1,0 +1,7 @@
+package labPackage;
+
+import lejos.hardware.*;
+
+public class Loader {
+	public Loader()
+}

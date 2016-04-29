@@ -1,0 +1,113 @@
+package labPackage;
+
+import lejos.hardware.Sound;
+import lejos.robotics.SampleProvider;
+import lejos.robotics.filter.LowPassFilter;
+
+public class GoCloseToBalls {
+
+
+	Navigation nav;
+	int lane;
+	Odometer odo;
+	Thread thread1;
+	Thread thread2;
+	Thread thread3;
+	int corner;
+	int lowerLeftX;
+	int lowerLeftY;
+	private SampleProvider usSensor1;
+	private float[] usData1;
+	boolean noObstacle = true;
+	boolean travellingInX = true;
+
+
+
+	public GoCloseToBalls(Navigation nav, Odometer odo, int lowerLeftX, int lowerLeftY, SampleProvider usSensor1, float[] usData1){
+
+		this.nav = nav;
+		this.lane = lane;
+		this.odo = odo;
+		this.lowerLeftX = lowerLeftX;
+		this.lowerLeftY = lowerLeftY;
+
+		this.usSensor1 = usSensor1;
+		this.usData1 = usData1;
+		setUpThreads();
+
+
+	}
+	public void runThreads(){
+		thread1.start();
+		thread2.start();
+	}
+
+	public void setUpThreads(){
+		thread1 = new Thread(){
+			public void run(){
+				int i = 1;
+				int j = 1;
+				while(true)
+					while(noObstacle){
+						for (; i < lowerLeftX; i++) {
+							nav.travelTo((i)*30.96, 15.84, true);
+							Sound.beepSequence();
+						}
+
+						//nav.travelTo((lowerLeftX-1)*30.96, odo.getY(), true);
+						for(; j < lowerLeftY; j++){
+						nav.travelTo(odo.getX(), (j)*30.96, true);
+						}
+					}
+
+			}
+		};
+
+		thread2 = new Thread(){
+			public void run(){
+				while(true){
+					if(getFilteredData1() < 19 && nav.doneTurning){
+						noObstacle = false;
+						nav.setKeepTravelling(false);
+						nav.setSpeeds(0, 0);
+						double xValue = odo.getX();
+						double yValue = odo.getY();
+						
+						if (xValue < ((lowerLeftX-1)*30.96 - 5) || xValue > ((lowerLeftX-1)*30.96 +5)){
+							
+							nav.setKeepTravelling(true);
+							nav.turnToFast(90, false);
+							Sound.beepSequence();
+							Sound.beepSequence();
+							nav.goForward(36.7);
+							nav.turnToFast(0, false);    //rememeber this 0 changes depending where the ball rack is
+							
+						}
+						else{
+							nav.setKeepTravelling(true);
+							nav.turnToFast(180, false);
+							nav.goForward(46.7);
+							nav.turnToFast(90, false);
+							
+						}
+						
+					}
+					noObstacle = true;
+				}
+
+			}
+		};
+
+
+	}
+
+	private float getFilteredData1() {
+		usSensor1.fetchSample(usData1, 0);
+		float distance = usData1[0]*100;
+
+		if (distance > 60)														
+			distance = 60;																				
+
+		return distance;
+	}
+}
